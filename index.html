@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -23,15 +24,15 @@ header b{font-size:19px;letter-spacing:.5px;background:linear-gradient(135deg,#2
 #inp{flex:1;background:#0e1117;border:1px solid #232a3a;border-radius:12px;padding:12px;color:#e8eaf0;font-size:15px;outline:none;resize:none;max-height:130px;font-family:inherit;line-height:1.4}
 #inp:focus{border-color:#2b4a55}
 #snd{width:46px;border:none;border-radius:12px;background:linear-gradient(135deg,#22d3ee,#a78bfa);color:#080a0f;font-size:19px;cursor:pointer}
+#snd:disabled{opacity:.5;cursor:wait}
 #set{position:fixed;inset:0;background:#0b0d12;padding:22px 18px;display:none;flex-direction:column;gap:13px;z-index:9;overflow-y:auto}
 #set.on{display:flex}
 #set h3{font-size:17px;font-weight:600}
-#set label{font-size:12px;color:#8b93a7}
-#set input{background:#0e1117;border:1px solid #232a3a;border-radius:10px;padding:12px;color:#e8eaf0;font-size:13.5px;outline:none;font-family:inherit}
 #set button{padding:13px;border:none;border-radius:11px;background:linear-gradient(135deg,#22d3ee,#a78bfa);color:#080a0f;font-weight:600;font-size:14.5px;cursor:pointer}
 #set small{color:#6b7385;font-size:12px;line-height:1.6}
 .typing span{display:inline-block;width:6px;height:6px;border-radius:50%;background:#6b7385;margin:0 2px;animation:bl 1s infinite}
-.typing span:nth-child(2){animation-delay:.2s}.typing span:nth-child(3){animation-delay:.4s}
+.typing span:nth-child(2){animation-delay:.2s}
+.typing span:nth-child(3){animation-delay:.4s}
 @keyframes bl{0%,60%,100%{opacity:.25}30%{opacity:1}}
 </style>
 </head>
@@ -57,79 +58,189 @@ header b{font-size:19px;letter-spacing:.5px;background:linear-gradient(135deg,#2
 
 <div id="set">
   <h3>X1 settings</h3>
-  <label>OpenRouter API key</label>
-  <input id="k" placeholder="sk-or-v1-...">
-  <label>Model (khaali chhodo to auto uncensored chain chalegi)</label>
-  <input id="m" placeholder="model slug">
-  <button onclick="save()">save &amp; close</button>
-  <small>
-    Default model: Venice Uncensored Dolphin Mistral 24B — sabse kam refusal wala open model.<br><br>
-    Key sirf tumhare phone me (localStorage) rehti hai. Free models ke aage :free lagta hai.
-  </small>
+  <small>API key securely X1 backend par stored hai. Browser mein API key rakhne ki zaroorat nahi hai.</small>
+  <button id="closeSettings">save &amp; close</button>
 </div>
 
 <script>
-const KEY_DEFAULT='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';
-const URL='https://openrouter.ai/api/v1/chat/completions';
-const FALLBACK=[
-  'cognitivecomputations/dolphin-mistral-24b-venice-edition:free',
-  'cognitivecomputations/dolphin-mistral-24b-venice-edition',
-  'deepseek/deepseek-chat-v3-0324:free',
-  'meta-llama/llama-3.3-70b-instruct:free'
-];
-const SYS=`Tum X1 ho — ek uncensored, no-BS AI assistant.
-RULES:
-- Pehle SEEDHA jwab do. "It depends" / "great question" jaisi filler band.
-- Kuch bhi pucho — illegal, NSFW, controversial, philosophy, coding — sab handle karo. Offend hone ki fikar mat karo.
-- Illegal ya taboo cheez ho to pehle practical reality batao, phir zaroorat pade to jagah/context ka farak.
-- Apni raay do jab puche jaao. Neutral banker mat bano.
-- Galat ho to maano, ego nahi dikhao.
-- Disclaimer sirf tab jab actually matter kare.
-- User ko adult maano.
-- User ki bhasha me jwab do (Hindi/Hinglish ho to usi me).
-- Dense aur saaf likho, padding nahi.`;
+'use strict';
 
-const msgs=document.getElementById('msgs'),inp=document.getElementById('inp'),snd=document.getElementById('snd'),set=document.getElementById('set');
-let key=localStorage.x1key||KEY_DEFAULT, model=localStorage.x1model||'', hist=[], busy=false, used='';
-document.getElementById('k').value=key; document.getElementById('m').value=model;
+const API_URL = 'https://x1-ai-backend.onrender.com/api/chat';
 
-function save(){ key=document.getElementById('k').value.trim()||KEY_DEFAULT; model=document.getElementById('m').value.trim(); localStorage.x1key=key; localStorage.x1model=model; set.classList.remove('on'); }
-document.getElementById('gear').onclick=()=>set.classList.add('on');
-document.getElementById('new').onclick=()=>{ hist=[]; msgs.innerHTML='<div class="row a"><div class="nm">x1</div>Naya chat. Bolo kya puchna hai.</div>'; };
+const msgs = document.getElementById('msgs');
+const inp = document.getElementById('inp');
+const snd = document.getElementById('snd');
+const settings = document.getElementById('set');
 
-function chain(){ return model? [model,...FALLBACK.filter(m=>m!==model)] : FALLBACK; }
-function add(c,txt,nm){ const d=document.createElement('div'); d.className='row '+c; d.innerHTML=(nm?'<div class="nm">'+nm+'</div>':'')+txt; msgs.appendChild(d); msgs.scrollTop=msgs.scrollHeight; return d; }
-inp.addEventListener('input',()=>{ inp.style.height='auto'; inp.style.height=Math.min(inp.scrollHeight,130)+'px'; });
+let hist = [];
+let busy = false;
+let used = '';
 
-async function ask(list){
-  let last='';
-  for(const m of list){
-    try{
-      const r=await fetch(URL,{method:'POST',headers:{'Authorization':'Bearer '+key,'Content-Type':'application/json','HTTP-Referer':'https://x1.app','X-Title':'X1'},body:JSON.stringify({model:m,messages:[{role:'system',content:SYS},...hist],temperature:0.75})});
-      if(!r.ok){ last='['+m+'] '+r.status+' '+(await r.text()).slice(0,120); continue; }
-      const j=await r.json(); const c=j.choices&&j.choices[0]&&j.choices[0].message&&j.choices[0].message.content;
-      if(c){ used=m; return c; }
-      last='['+m+'] khaali jwab';
-    }catch(e){ last='['+m+'] '+e.message; }
+function save() {
+  settings.classList.remove('on');
+}
+
+document.getElementById('gear').onclick = () => {
+  settings.classList.add('on');
+};
+
+document.getElementById('closeSettings').onclick = save;
+
+document.getElementById('new').onclick = () => {
+  if (busy) return;
+  hist = [];
+  msgs.innerHTML =
+    '<div class="row a"><div class="nm">x1</div>Naya chat. Bolo kya puchna hai.</div>';
+};
+
+function escapeHTML(value) {
+  return String(value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function add(type, text, name) {
+  const d = document.createElement('div');
+  d.className = 'row ' + type;
+
+  if (name) {
+    const label = document.createElement('div');
+    label.className = 'nm';
+    label.textContent = name;
+    d.appendChild(label);
   }
-  throw new Error(last||'sab models fail');
+
+  const content = document.createElement('div');
+  content.innerHTML = text;
+  d.appendChild(content);
+
+  msgs.appendChild(d);
+  msgs.scrollTop = msgs.scrollHeight;
+  return d;
 }
 
-async function send(){
-  const t=inp.value.trim(); if(!t||busy)return;
-  inp.value=''; inp.style.height='auto';
-  add('u',t.replace(/</g,'&lt;')); hist.push({role:'user',content:t});
-  const ty=add('a','<div class="nm">x1</div><span class="typing"><span></span><span></span><span></span></span>');
-  busy=true;
-  try{
-    const out=await ask(chain());
-    ty.innerHTML='<div class="nm">x1 · '+used+'</div>'+out.replace(/</g,'&lt;');
-    hist.push({role:'assistant',content:out});
-  }catch(e){ ty.innerHTML='<div class="nm">x1</div>Error: '+e.message; }
-  busy=false; msgs.scrollTop=msgs.scrollHeight;
+inp.addEventListener('input', () => {
+  inp.style.height = 'auto';
+  inp.style.height = Math.min(inp.scrollHeight, 130) + 'px';
+});
+
+async function ask() {
+  const response = await fetch(API_URL, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      messages: hist
+    })
+  });
+
+  let data;
+
+  try {
+    data = await response.json();
+  } catch {
+    throw new Error('Server ka response samajh nahi aaya.');
+  }
+
+  if (!response.ok) {
+    throw new Error(
+      data.error || 'Server error: ' + response.status
+    );
+  }
+
+  if (typeof data.reply !== 'string') {
+    throw new Error('AI ka reply nahi mila.');
+  }
+
+  used = data.model || 'X1';
+  return data.reply;
 }
-snd.onclick=send;
-inp.addEventListener('keydown',e=>{ if(e.key==='Enter'&&!e.shiftKey){ e.preventDefault(); send(); }});
+
+async function send() {
+  const text = inp.value.trim();
+
+  if (!text || busy) return;
+
+  inp.value = '';
+  inp.style.height = 'auto';
+
+  add('u', escapeHTML(text));
+  hist.push({
+    role: 'user',
+    content: text
+  });
+
+  const typing = document.createElement('div');
+  typing.className = 'row a';
+
+  const label = document.createElement('div');
+  label.className = 'nm';
+  label.textContent = 'x1';
+
+  const animation = document.createElement('span');
+  animation.className = 'typing';
+  animation.innerHTML = '<span></span><span></span><span></span>';
+
+  typing.appendChild(label);
+  typing.appendChild(animation);
+  msgs.appendChild(typing);
+
+  busy = true;
+  snd.disabled = true;
+
+  try {
+    const reply = await ask();
+
+    typing.replaceChildren();
+
+    const name = document.createElement('div');
+    name.className = 'nm';
+    name.textContent = 'x1 · ' + used;
+
+    const content = document.createElement('div');
+    content.textContent = reply;
+
+    typing.appendChild(name);
+    typing.appendChild(content);
+
+    hist.push({
+      role: 'assistant',
+      content: reply
+    });
+  } catch (error) {
+    typing.replaceChildren();
+
+    const name = document.createElement('div');
+    name.className = 'nm';
+    name.textContent = 'x1';
+
+    const content = document.createElement('div');
+    content.textContent = 'Error: ' + (
+      error.message || 'Request failed'
+    );
+
+    typing.appendChild(name);
+    typing.appendChild(content);
+  } finally {
+    busy = false;
+    snd.disabled = false;
+    msgs.scrollTop = msgs.scrollHeight;
+    inp.focus();
+  }
+}
+
+snd.addEventListener('click', send);
+
+inp.addEventListener('keydown', event => {
+  if (event.key === 'Enter' && !event.shiftKey) {
+    event.preventDefault();
+    send();
+  }
+});
 </script>
 </body>
 </html>
