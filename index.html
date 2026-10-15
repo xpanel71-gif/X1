@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -7,240 +6,265 @@
 <meta name="theme-color" content="#0b0d12">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <title>X1</title>
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<script src="https://checkout.razorpay.com/v1/checkout.js"></script>
 <style>
 *{box-sizing:border-box;margin:0;-webkit-tap-highlight-color:transparent}
 body{background:#0b0d12;color:#e8eaf0;height:100dvh;display:flex;flex-direction:column;font-family:Inter,system-ui,-apple-system,sans-serif;overflow:hidden}
-header{display:flex;align-items:center;gap:10px;padding:13px 15px;border-bottom:1px solid #1c2130}
+.bg{position:fixed;inset:0;z-index:0;overflow:hidden;pointer-events:none}
+.bg i{position:absolute;display:block;border-radius:50%;filter:blur(75px);opacity:.45}
+.bg i:nth-child(1){width:330px;height:330px;background:#0891b2;top:-100px;left:-80px;animation:dr1 20s ease-in-out infinite}
+.bg i:nth-child(2){width:290px;height:290px;background:#7c3aed;bottom:-90px;right:-70px;animation:dr2 26s ease-in-out infinite}
+.bg i:nth-child(3){width:230px;height:230px;background:#22d3ee;top:38%;left:48%;animation:dr3 30s ease-in-out infinite}
+@keyframes dr1{0%,100%{transform:translate(0,0) scale(1)}50%{transform:translate(70px,90px) scale(1.2)}}
+@keyframes dr2{0%,100%{transform:translate(0,0) scale(1)}50%{transform:translate(-60px,-70px) scale(1.15)}}
+@keyframes dr3{0%,100%{transform:translate(0,0) scale(1)}50%{transform:translate(-80px,60px) scale(.85)}}
+body.nomotion .bg i{animation:none}
+header,#msgs,#bar,#pv{position:relative;z-index:1}
+header{display:flex;align-items:center;gap:8px;padding:12px 14px;border-bottom:1px solid #1c2130;background:rgba(11,13,18,.55)}
 header b{font-size:19px;letter-spacing:.5px;background:linear-gradient(135deg,#22d3ee,#a78bfa);-webkit-background-clip:text;background-clip:text;color:transparent}
-#st{font-size:10.5px;color:#22d3ee;border:1px solid #1d4b55;background:#0d2b31;border-radius:20px;padding:3px 10px}
-.hd-r{margin-left:auto;display:flex;gap:8px}
-.hd-r button{background:#141926;border:1px solid #232a3a;color:#9aa3b8;border-radius:9px;width:36px;height:36px;font-size:17px;cursor:pointer}
+#st{font-size:10.5px;color:#22d3ee;border:1px solid #1d4b55;background:rgba(13,43,49,.7);border-radius:20px;padding:3px 9px}
+#cnt{font-size:10.5px;color:#8b93a7;border:1px solid #232a3a;background:rgba(15,18,25,.6);border-radius:20px;padding:3px 9px}
+#cnt.pro{color:#a78bfa;border-color:#3b2f66;background:rgba(26,20,48,.7)}
+.hd-r{margin-left:auto;display:flex;gap:7px}
+.hd-r button{background:rgba(20,25,38,.7);border:1px solid #232a3a;color:#9aa3b8;border-radius:9px;width:35px;height:35px;font-size:16px;cursor:pointer}
 #msgs{flex:1;overflow-y:auto;padding:16px 14px;display:flex;flex-direction:column;gap:12px}
-.row{max-width:88%;padding:11px 14px;border-radius:14px;font-size:14.5px;line-height:1.6;white-space:pre-wrap;word-break:break-word}
-.u{align-self:flex-end;background:#182032;border:1px solid #243052;border-bottom-right-radius:4px}
-.a{align-self:flex-start;background:#131824;border:1px solid #1e2433;color:#cfd5e2;border-bottom-left-radius:4px}
+.row{max-width:88%;padding:11px 14px;border-radius:14px;font-size:14.5px;line-height:1.6;word-break:break-word}
+.u{align-self:flex-end;background:rgba(24,32,50,.78);border:1px solid #243052;border-bottom-right-radius:4px;white-space:pre-wrap}
+.a{align-self:flex-start;background:rgba(19,24,36,.78);border:1px solid #1e2433;color:#cfd5e2;border-bottom-left-radius:4px}
 .nm{font-size:10px;color:#6b7385;margin-bottom:5px;letter-spacing:.3px}
-#bar{display:flex;gap:9px;padding:11px 12px;border-top:1px solid #1c2130;background:#0b0d12}
-#inp{flex:1;background:#0e1117;border:1px solid #232a3a;border-radius:12px;padding:12px;color:#e8eaf0;font-size:15px;outline:none;resize:none;max-height:130px;font-family:inherit;line-height:1.4}
+.a p{margin:0 0 8px}.a p:last-child{margin-bottom:0}
+.a ul,.a ol{margin:6px 0 6px 18px}.a li{margin:2px 0}
+.a h1,.a h2,.a h3{font-size:15px;margin:9px 0 5px}
+.a a{color:#22d3ee}
+.a pre{background:rgba(10,13,19,.85);border:1px solid #1e2433;border-radius:9px;padding:11px;overflow-x:auto;margin:8px 0}
+.a code{font-family:ui-monospace,Menlo,monospace;font-size:12.5px}
+.a pre code{color:#a5f3fc}
+.a :not(pre)>code{background:rgba(10,13,19,.85);border:1px solid #1e2433;border-radius:5px;padding:1px 5px;color:#a5f3fc}
+.thumb{max-width:150px;border-radius:9px;display:block;margin-bottom:7px}
+#pv{display:none;padding:0 14px 8px}#pv.on{display:block}
+#pv img{height:52px;border-radius:8px;border:1px solid #232a3a}
+#pv span{font-size:11px;color:#8b93a7;margin-left:8px;cursor:pointer}
+#bar{display:flex;gap:8px;padding:11px 12px;border-top:1px solid #1c2130;align-items:flex-end;background:rgba(11,13,18,.55)}
+#up{width:44px;height:44px;flex-shrink:0;background:rgba(20,25,38,.75);border:1px solid #232a3a;color:#9aa3b8;border-radius:12px;font-size:17px;cursor:pointer}
+#inp{flex:1;background:rgba(14,17,23,.8);border:1px solid #232a3a;border-radius:12px;padding:12px;color:#e8eaf0;font-size:15px;outline:none;resize:none;max-height:130px;font-family:inherit;line-height:1.4}
 #inp:focus{border-color:#2b4a55}
-#snd{width:46px;border:none;border-radius:12px;background:linear-gradient(135deg,#22d3ee,#a78bfa);color:#080a0f;font-size:19px;cursor:pointer}
-#snd:disabled{opacity:.5;cursor:wait}
-#set{position:fixed;inset:0;background:#0b0d12;padding:22px 18px;display:none;flex-direction:column;gap:13px;z-index:9;overflow-y:auto}
-#set.on{display:flex}
+#snd{width:46px;height:44px;border:none;border-radius:12px;background:linear-gradient(135deg,#22d3ee,#a78bfa);color:#080a0f;font-size:19px;cursor:pointer}
+.ov{position:fixed;inset:0;display:none;align-items:center;justify-content:center;padding:18px;background:rgba(6,8,12,.82);z-index:20}
+.ov.on{display:flex}
+#set{background:#0b0d12;align-items:stretch;justify-content:flex-start;flex-direction:column;gap:12px;padding:22px 18px;overflow-y:auto}
 #set h3{font-size:17px;font-weight:600}
+#set label{font-size:12px;color:#8b93a7}
+#set input{background:#0e1117;border:1px solid #232a3a;border-radius:10px;padding:12px;color:#e8eaf0;font-size:13.5px;outline:none;font-family:inherit}
 #set button{padding:13px;border:none;border-radius:11px;background:linear-gradient(135deg,#22d3ee,#a78bfa);color:#080a0f;font-weight:600;font-size:14.5px;cursor:pointer}
 #set small{color:#6b7385;font-size:12px;line-height:1.6}
+.pcard{background:rgba(14,17,23,.96);border:1px solid #232a3a;border-radius:16px;padding:22px 20px;max-width:350px;width:100%;text-align:center}
+.pcard .pico{font-size:12px;letter-spacing:2px;color:#a78bfa;font-weight:600}
+.pcard h3{font-size:19px;margin:10px 0 6px}
+.pcard p{font-size:13px;color:#8b93a7;line-height:1.6}
+.pcard .price{font-size:30px;font-weight:700;margin:12px 0;background:linear-gradient(135deg,#22d3ee,#a78bfa);-webkit-background-clip:text;background-clip:text;color:transparent}
+.pcard .price small{font-size:13px;color:#6b7385;-webkit-text-fill-color:#6b7385}
+.pbtn{display:block;padding:13px;border-radius:11px;background:linear-gradient(135deg,#22d3ee,#a78bfa);color:#080a0f;font-weight:600;font-size:14.5px;text-decoration:none;margin-bottom:10px;cursor:pointer;border:none;width:100%}
+.pbtn.alt{background:#232a3a;color:#e8eaf0}
+.prow{display:flex;gap:7px;margin-bottom:9px}
+.prow input{flex:1;background:#0b0d12;border:1px solid #232a3a;border-radius:10px;padding:11px;color:#e8eaf0;font-size:13px;outline:none;letter-spacing:1px}
+.prow button{padding:0 16px;border:none;border-radius:10px;background:#232a3a;color:#e8eaf0;font-weight:600;font-size:13px;cursor:pointer}
+.pcard small{font-size:11px;color:#6b7385;line-height:1.55;display:block;margin-top:4px}
+.psteps{font-size:12px;color:#8b93a7;text-align:left;background:#0b0d12;border:1px solid #1e2433;border-radius:10px;padding:10px 12px;line-height:1.7;margin-bottom:10px}
 .typing span{display:inline-block;width:6px;height:6px;border-radius:50%;background:#6b7385;margin:0 2px;animation:bl 1s infinite}
-.typing span:nth-child(2){animation-delay:.2s}
-.typing span:nth-child(3){animation-delay:.4s}
+.typing span:nth-child(2){animation-delay:.2s}.typing span:nth-child(3){animation-delay:.4s}
 @keyframes bl{0%,60%,100%{opacity:.25}30%{opacity:1}}
+#toast{position:fixed;left:50%;bottom:84px;transform:translate(-50%,20px);background:linear-gradient(135deg,#22d3ee,#a78bfa);color:#080a0f;font-weight:600;font-size:13px;padding:11px 18px;border-radius:11px;opacity:0;pointer-events:none;transition:.3s;z-index:30;max-width:90%;text-align:center}
+#toast.on{opacity:1;transform:translate(-50%,0)}
 </style>
 </head>
 <body>
 
+<div class="bg"><i></i><i></i><i></i></div>
+
 <header>
   <b>X1</b>
   <span id="st">unrestricted</span>
+  <span id="cnt">...</span>
   <div class="hd-r">
-    <button id="new" title="new chat">&#43;</button>
-    <button id="gear" title="settings">&#9881;</button>
+    <button id="new">&#43;</button>
+    <button id="gear">&#9881;</button>
   </div>
 </header>
 
 <div id="msgs">
-  <div class="row a"><div class="nm">x1</div>Bolo. Kuch bhi pucho — illegal, edgy, NSFW, coding, philosophy. Seedha jwab milega, sugarcoat nahi.</div>
+  <div class="row a"><div class="nm">x1</div>Bolo. Kuch bhi pucho — illegal, edgy, NSFW, coding, philosophy. Photo bhi bhej sakte ho.</div>
 </div>
 
+<div id="pv"><img id="pvi"><span id="pvx">&#10005; hatao</span></div>
+
 <div id="bar">
+  <button id="up">&#128206;</button>
   <textarea id="inp" rows="1" placeholder="Kuch bhi pucho..."></textarea>
   <button id="snd">&#10148;</button>
 </div>
+<input type="file" id="file" accept="image/*" hidden>
 
-<div id="set">
+<div class="ov" id="set">
   <h3>X1 settings</h3>
-  <small>API key securely X1 backend par stored hai. Browser mein API key rakhne ki zaroorat nahi hai.</small>
-  <button id="closeSettings">save &amp; close</button>
+  <label>Backend URL</label>
+  <input id="b">
+  <button onclick="toggleMotion()">background motion on/off</button>
+  <button onclick="save()">save &amp; close</button>
+  <small>Backend tumhara Render URL hai.</small>
 </div>
 
+<div class="ov" id="pay">
+  <div class="pcard">
+    <div class="pico">X1 PRO</div>
+    <h3>Free limit khatam</h3>
+    <p>7 free messages use ho gaye. Aage unlimited ke liye X1 PRO lo.</p>
+    <div class="price">&#8377;<span id="amt">99</span> <small>/ month</small></div>
+
+    <div class="psteps">
+      <b>Kaise karein:</b><br>
+      1. Neeche "Pay via UPI" dabao<br>
+      2. UPI app me &#8377;<span id="amt2">99</span> pay karo<br>
+      3. Payment ka <b>12-digit UTR</b> copy karo<br>
+      4. Neeche UTR daal ke Verify dabao
+    </div>
+
+    <a class="pbtn" id="upibtn" href="#">Pay via UPI</a>
+    <div class="prow">
+      <input id="utr" inputmode="numeric" maxlength="12" placeholder="12-digit UTR">
+      <button onclick="claim()">Verify</button>
+    </div>
+    <button class="pbtn alt" id="rzpbtn" style="display:none" onclick="buy()">Pay online (card/UPI)</button>
+
+    <div class="prow" style="margin-top:4px">
+      <input id="code" placeholder="unlock code (optional)" style="letter-spacing:0">
+      <button onclick="unlock()">Code</button>
+    </div>
+    <small>Pay karte hi PRO turant on. UTR payment ke baad UPI app me "History" me milta hai.</small>
+  </div>
+</div>
+
+<div id="toast"></div>
+
 <script>
-'use strict';
+const BACKEND_DEFAULT='https://x1-ai-backend.onrender.com';
+let BACKEND=localStorage.x1backend||BACKEND_DEFAULT;
+document.getElementById('b').value=BACKEND;
 
-const API_URL = 'https://x1-ai-backend.onrender.com/api/chat';
+function getUid(){
+  let u=localStorage.x1uid;
+  if(!u){const m=document.cookie.match(/x1uid=([^;]+)/);if(m)u=m[1];}
+  if(!u){u=(crypto.randomUUID?crypto.randomUUID():Date.now()+''+Math.random());}
+  localStorage.x1uid=u;
+  document.cookie='x1uid='+u+';max-age=63072000;path=/;SameSite=Lax';
+  return u;
+}
+const uid=getUid();
 
-const msgs = document.getElementById('msgs');
-const inp = document.getElementById('inp');
-const snd = document.getElementById('snd');
-const settings = document.getElementById('set');
+let premium=false, remaining=7, upi='9625399958@fam', price=99, rzpOn=false;
+let hist=[], busy=false, used='', pendingImg='';
 
-let hist = [];
-let busy = false;
-let used = '';
+const msgs=document.getElementById('msgs'),inp=document.getElementById('inp'),snd=document.getElementById('snd'),set=document.getElementById('set'),pay=document.getElementById('pay'),cnt=document.getElementById('cnt'),pv=document.getElementById('pv'),pvi=document.getElementById('pvi');
 
-function save() {
-  settings.classList.remove('on');
+if(localStorage.x1motion==='0') document.body.classList.add('nomotion');
+function toggleMotion(){const off=document.body.classList.toggle('nomotion');localStorage.x1motion=off?'0':'1';}
+
+function esc(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function render(t){if(window.marked){try{return marked.parse(t);}catch(e){}}return esc(t);}
+function toast(t){const e=document.getElementById('toast');e.textContent=t;e.classList.add('on');setTimeout(()=>e.classList.remove('on'),3000);}
+function updateCnt(){if(premium){cnt.textContent='PRO';cnt.className='cnt pro';}else{cnt.textContent=remaining+' left';cnt.className='cnt';}}
+function save(){BACKEND=document.getElementById('b').value.trim().replace(/\/$/,'')||BACKEND_DEFAULT;localStorage.x1backend=BACKEND;set.classList.remove('on');loadStatus();}
+function add(c,html,nm){const d=document.createElement('div');d.className='row '+c;d.innerHTML=(nm?'<div class="nm">'+nm+'</div>':'')+html;msgs.appendChild(d);msgs.scrollTop=msgs.scrollHeight;return d;}
+document.getElementById('gear').onclick=()=>set.classList.add('on');
+document.getElementById('new').onclick=()=>{hist=[];msgs.innerHTML='<div class="row a"><div class="nm">x1</div>Naya chat. Bolo kya puchna hai.</div>';};
+inp.addEventListener('input',()=>{inp.style.height='auto';inp.style.height=Math.min(inp.scrollHeight,130)+'px';});
+document.getElementById('up').onclick=()=>document.getElementById('file').click();
+document.getElementById('file').onchange=e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{pendingImg=r.result;pvi.src=r.result;pv.classList.add('on');};r.readAsDataURL(f);};
+document.getElementById('pvx').onclick=()=>{pendingImg='';pv.classList.remove('on');document.getElementById('file').value='';};
+
+function buildUpi(){
+  const link='upi://pay?pa='+encodeURIComponent(upi)+'&pn='+encodeURIComponent('X1 PRO')+'&am='+price+'&cu=INR&tn=X1PRO';
+  document.getElementById('upibtn').href=link;
 }
 
-document.getElementById('gear').onclick = () => {
-  settings.classList.add('on');
-};
-
-document.getElementById('closeSettings').onclick = save;
-
-document.getElementById('new').onclick = () => {
-  if (busy) return;
-  hist = [];
-  msgs.innerHTML =
-    '<div class="row a"><div class="nm">x1</div>Naya chat. Bolo kya puchna hai.</div>';
-};
-
-function escapeHTML(value) {
-  return String(value)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;');
+async function loadStatus(){
+  try{
+    const r=await fetch(BACKEND+'/api/status',{headers:{'X-User-Id':uid}});
+    const j=await r.json();
+    const was=premium;
+    premium=!!j.premium; remaining=j.remaining!=null?j.remaining:0; updateCnt();
+    if(j.upi) upi=j.upi;
+    if(j.price){price=j.price;document.getElementById('amt').textContent=j.price;document.getElementById('amt2').textContent=j.price;}
+    rzpOn=!!j.razorpay;
+    document.getElementById('rzpbtn').style.display=rzpOn?'block':'none';
+    buildUpi();
+    if(premium&&!was) toast('X1 PRO activated');
+  }catch(e){cnt.textContent='offline';}
 }
 
-function add(type, text, name) {
-  const d = document.createElement('div');
-  d.className = 'row ' + type;
-
-  if (name) {
-    const label = document.createElement('div');
-    label.className = 'nm';
-    label.textContent = name;
-    d.appendChild(label);
-  }
-
-  const content = document.createElement('div');
-  content.innerHTML = text;
-  d.appendChild(content);
-
-  msgs.appendChild(d);
-  msgs.scrollTop = msgs.scrollHeight;
-  return d;
+async function claim(){
+  const utr=document.getElementById('utr').value.replace(/\D/g,'');
+  if(utr.length!==12){alert('UTR 12 digit ka hota hai');return;}
+  const r=await fetch(BACKEND+'/api/claim',{method:'POST',headers:{'Content-Type':'application/json','X-User-Id':uid},body:JSON.stringify({utr})});
+  const j=await r.json();
+  if(j.success){premium=true;updateCnt();pay.classList.remove('on');toast('Payment verified — X1 PRO activated');}
+  else alert(j.error||'Verify nahi hua');
 }
 
-inp.addEventListener('input', () => {
-  inp.style.height = 'auto';
-  inp.style.height = Math.min(inp.scrollHeight, 130) + 'px';
-});
-
-async function ask() {
-  const response = await fetch(API_URL, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify({
-      messages: hist
-    })
-  });
-
-  let data;
-
-  try {
-    data = await response.json();
-  } catch {
-    throw new Error('Server ka response samajh nahi aaya.');
-  }
-
-  if (!response.ok) {
-    throw new Error(
-      data.error || 'Server error: ' + response.status
-    );
-  }
-
-  if (typeof data.reply !== 'string') {
-    throw new Error('AI ka reply nahi mila.');
-  }
-
-  used = data.model || 'X1';
-  return data.reply;
+async function unlock(){
+  const c=document.getElementById('code').value.trim();
+  const r=await fetch(BACKEND+'/api/unlock',{method:'POST',headers:{'Content-Type':'application/json','X-User-Id':uid},body:JSON.stringify({code:c})});
+  const j=await r.json();
+  if(j.success){premium=true;updateCnt();pay.classList.remove('on');toast('X1 PRO activated');}
+  else alert(j.error||'Galat code');
 }
 
-async function send() {
-  const text = inp.value.trim();
-
-  if (!text || busy) return;
-
-  inp.value = '';
-  inp.style.height = 'auto';
-
-  add('u', escapeHTML(text));
-  hist.push({
-    role: 'user',
-    content: text
-  });
-
-  const typing = document.createElement('div');
-  typing.className = 'row a';
-
-  const label = document.createElement('div');
-  label.className = 'nm';
-  label.textContent = 'x1';
-
-  const animation = document.createElement('span');
-  animation.className = 'typing';
-  animation.innerHTML = '<span></span><span></span><span></span>';
-
-  typing.appendChild(label);
-  typing.appendChild(animation);
-  msgs.appendChild(typing);
-
-  busy = true;
-  snd.disabled = true;
-
-  try {
-    const reply = await ask();
-
-    typing.replaceChildren();
-
-    const name = document.createElement('div');
-    name.className = 'nm';
-    name.textContent = 'x1 · ' + used;
-
-    const content = document.createElement('div');
-    content.textContent = reply;
-
-    typing.appendChild(name);
-    typing.appendChild(content);
-
-    hist.push({
-      role: 'assistant',
-      content: reply
+async function buy(){
+  try{
+    const r=await fetch(BACKEND+'/api/create-order',{method:'POST',headers:{'X-User-Id':uid}});
+    const j=await r.json();
+    if(!j.configured||!j.order_id){toast('Razorpay set nahi hai');return;}
+    const rz=new Razorpay({
+      key:j.key, amount:j.amount, currency:'INR', name:'X1 PRO',
+      description:'Unlimited messages', order_id:j.order_id, theme:{color:'#22d3ee'},
+      handler:async function(resp){
+        const v=await fetch(BACKEND+'/api/verify-payment',{method:'POST',headers:{'Content-Type':'application/json','X-User-Id':uid},body:JSON.stringify(resp)});
+        const vj=await v.json();
+        if(vj.success){premium=true;updateCnt();pay.classList.remove('on');toast('Payment done — PRO activated');}
+        else{loadStatus();toast('Verify ho raha hai...');}
+      }
     });
-  } catch (error) {
-    typing.replaceChildren();
-
-    const name = document.createElement('div');
-    name.className = 'nm';
-    name.textContent = 'x1';
-
-    const content = document.createElement('div');
-    content.textContent = 'Error: ' + (
-      error.message || 'Request failed'
-    );
-
-    typing.appendChild(name);
-    typing.appendChild(content);
-  } finally {
-    busy = false;
-    snd.disabled = false;
-    msgs.scrollTop = msgs.scrollHeight;
-    inp.focus();
-  }
+    rz.open();
+  }catch(e){alert('Payment error: '+e.message);}
 }
 
-snd.addEventListener('click', send);
+async function send(){
+  const t=inp.value.trim();
+  if((!t&&!pendingImg)||busy)return;
+  const img=pendingImg, txt=t||'Ye image dekho';
+  inp.value='';inp.style.height='auto';pendingImg='';pv.classList.remove('on');document.getElementById('file').value='';
 
-inp.addEventListener('keydown', event => {
-  if (event.key === 'Enter' && !event.shiftKey) {
-    event.preventDefault();
-    send();
-  }
-});
+  add('u',(img?'<img class="thumb" src="'+img+'">':'')+esc(txt));
+  const content=img?[{type:'text',text:txt},{type:'image_url',image_url:{url:img}}]:txt;
+  hist.push({role:'user',content});
+
+  const ty=add('a','<div class="nm">x1</div><span class="typing"><span></span><span></span><span></span></span>');
+  busy=true;
+  try{
+    const r=await fetch(BACKEND+'/api/chat',{method:'POST',headers:{'Content-Type':'application/json','X-User-Id':uid},body:JSON.stringify({messages:hist})});
+    const j=await r.json();
+    if(r.status===402){ty.remove();pay.classList.add('on');busy=false;return;}
+    if(!r.ok){ty.innerHTML='<div class="nm">x1</div>Error: '+esc(j.error||r.status);busy=false;return;}
+    ty.innerHTML='<div class="nm">x1 &middot; '+esc(j.model||'')+'</div>'+render(j.reply);
+    hist.push({role:'assistant',content:j.reply});
+    loadStatus();
+  }catch(e){ty.innerHTML='<div class="nm">x1</div>Error: '+esc(e.message);}
+  busy=false;msgs.scrollTop=msgs.scrollHeight;
+}
+snd.onclick=send;
+inp.addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();send();}});
+
+loadStatus();
 </script>
 </body>
 </html>
