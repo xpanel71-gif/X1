@@ -140,7 +140,7 @@ header b{font-size:19px;letter-spacing:.5px;background:linear-gradient(135deg,#2
       <input id="code" placeholder="unlock code (optional)" style="letter-spacing:0">
       <button onclick="unlock()">Code</button>
     </div>
-    <small>Pay karte hi PRO turant on. UTR payment ke baad UPI app me "History" me milta hai.</small>
+    <small>UTR daalne ke baad PRO on ho jayega. UTR payment ke baad UPI app me "History" me milta hai.</small>
   </div>
 </div>
 
@@ -161,7 +161,7 @@ function getUid(){
 }
 const uid=getUid();
 
-let premium=false, remaining=7, upi='9625399958@fam', price=99, rzpOn=false;
+let premium=false, remaining=7, upi='9625399958@fam', price=99, rzpOn=false, daysLeft=0;
 let hist=[], busy=false, used='', pendingImg='';
 
 const msgs=document.getElementById('msgs'),inp=document.getElementById('inp'),snd=document.getElementById('snd'),set=document.getElementById('set'),pay=document.getElementById('pay'),cnt=document.getElementById('cnt'),pv=document.getElementById('pv'),pvi=document.getElementById('pvi');
@@ -171,8 +171,9 @@ function toggleMotion(){const off=document.body.classList.toggle('nomotion');loc
 
 function esc(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
 function render(t){if(window.marked){try{return marked.parse(t);}catch(e){}}return esc(t);}
+function shortModel(m){if(!m)return 'x1';if(m.includes('dolphin'))return 'x1 uncensored';if(m.includes('deepseek'))return 'x1 deepseek';if(m.includes('llama'))return 'x1 llama';if(m.includes('qwen'))return 'x1 qwen';return 'x1';}
 function toast(t){const e=document.getElementById('toast');e.textContent=t;e.classList.add('on');setTimeout(()=>e.classList.remove('on'),3000);}
-function updateCnt(){if(premium){cnt.textContent='PRO';cnt.className='cnt pro';}else{cnt.textContent=remaining+' left';cnt.className='cnt';}}
+function updateCnt(){if(premium){cnt.textContent=daysLeft>0?'PRO · '+daysLeft+'d':'PRO';cnt.className='cnt pro';}else{cnt.textContent=remaining+' left';cnt.className='cnt';}}
 function save(){BACKEND=document.getElementById('b').value.trim().replace(/\/$/,'')||BACKEND_DEFAULT;localStorage.x1backend=BACKEND;set.classList.remove('on');loadStatus();}
 function add(c,html,nm){const d=document.createElement('div');d.className='row '+c;d.innerHTML=(nm?'<div class="nm">'+nm+'</div>':'')+html;msgs.appendChild(d);msgs.scrollTop=msgs.scrollHeight;return d;}
 document.getElementById('gear').onclick=()=>set.classList.add('on');
@@ -187,12 +188,16 @@ function buildUpi(){
   document.getElementById('upibtn').href=link;
 }
 
+let pollTimer=null;
+function poll(){if(pollTimer)return;pollTimer=setInterval(async()=>{await loadStatus();if(premium){clearInterval(pollTimer);pollTimer=null;}},8000);}
+
 async function loadStatus(){
   try{
     const r=await fetch(BACKEND+'/api/status',{headers:{'X-User-Id':uid}});
     const j=await r.json();
     const was=premium;
-    premium=!!j.premium; remaining=j.remaining!=null?j.remaining:0; updateCnt();
+    premium=!!j.premium; remaining=j.remaining!=null?j.remaining:0; daysLeft=j.days_left||0; updateCnt();
+    if(j.pending_utr&&!premium) poll();
     if(j.upi) upi=j.upi;
     if(j.price){price=j.price;document.getElementById('amt').textContent=j.price;document.getElementById('amt2').textContent=j.price;}
     rzpOn=!!j.razorpay;
@@ -207,7 +212,10 @@ async function claim(){
   if(utr.length!==12){alert('UTR 12 digit ka hota hai');return;}
   const r=await fetch(BACKEND+'/api/claim',{method:'POST',headers:{'Content-Type':'application/json','X-User-Id':uid},body:JSON.stringify({utr})});
   const j=await r.json();
-  if(j.success){premium=true;updateCnt();pay.classList.remove('on');toast('Payment verified — X1 PRO activated');}
+  if(j.success){
+    if(j.premium){premium=true;updateCnt();pay.classList.remove('on');toast('Payment verified — X1 PRO activated');}
+    else{pay.classList.remove('on');toast('UTR bhej diya — approve hone ke baad PRO on hoga');poll();}
+  }
   else alert(j.error||'Verify nahi hua');
 }
 
@@ -255,7 +263,7 @@ async function send(){
     const j=await r.json();
     if(r.status===402){ty.remove();pay.classList.add('on');busy=false;return;}
     if(!r.ok){ty.innerHTML='<div class="nm">x1</div>Error: '+esc(j.error||r.status);busy=false;return;}
-    ty.innerHTML='<div class="nm">x1 &middot; '+esc(j.model||'')+'</div>'+render(j.reply);
+    ty.innerHTML='<div class="nm">'+shortModel(j.model)+'</div>'+render(j.reply);
     hist.push({role:'assistant',content:j.reply});
     loadStatus();
   }catch(e){ty.innerHTML='<div class="nm">x1</div>Error: '+esc(e.message);}
