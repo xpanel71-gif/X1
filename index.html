@@ -111,14 +111,14 @@ header b{font-size:19px;letter-spacing:.5px;background:linear-gradient(135deg,#2
   <input id="b">
   <button onclick="toggleMotion()">background motion on/off</button>
   <button onclick="save()">save &amp; close</button>
-  <small>Backend tumhara Render URL hai.</small>
+  <small>Backend tumhara Render URL hai (dikhna normal hai).</small>
 </div>
 
 <div class="ov" id="pay">
   <div class="pcard">
     <div class="pico">X1 PRO</div>
-    <h3>Free limit khatam</h3>
-    <p>7 free messages use ho gaye. Aage unlimited ke liye X1 PRO lo.</p>
+    <h3>Aaj ke free messages khatam</h3>
+    <p>Har din 7 free messages milte hain. Kal phir milenge — ya abhi X1 PRO le lo unlimited ke liye.</p>
     <div class="price">&#8377;<span id="amt">99</span> <small>/ month</small></div>
 
     <div class="psteps">
@@ -171,7 +171,7 @@ function toggleMotion(){const off=document.body.classList.toggle('nomotion');loc
 
 function esc(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
 function render(t){if(window.marked){try{return marked.parse(t);}catch(e){}}return esc(t);}
-function shortModel(m){if(!m)return 'x1';if(m.includes('dolphin'))return 'x1 uncensored';if(m.includes('deepseek'))return 'x1 deepseek';if(m.includes('llama'))return 'x1 llama';if(m.includes('qwen'))return 'x1 qwen';return 'x1';}
+function shortModel(m){if(!m)return 'x1';if(m.includes('dolphin'))return 'x1 uncensored';if(m.includes('deepseek'))return 'x1 deepseek';if(m.includes('llama'))return 'x1 llama';if(m.includes('qwen'))return 'x1 qwen';if(m.includes('gemma'))return 'x1 gemma';if(m.includes('mistral'))return 'x1 mistral';return 'x1';}
 function toast(t){const e=document.getElementById('toast');e.textContent=t;e.classList.add('on');setTimeout(()=>e.classList.remove('on'),3000);}
 function updateCnt(){if(premium){cnt.textContent=daysLeft>0?'PRO · '+daysLeft+'d':'PRO';cnt.className='cnt pro';}else{cnt.textContent=remaining+' left';cnt.className='cnt';}}
 function save(){BACKEND=document.getElementById('b').value.trim().replace(/\/$/,'')||BACKEND_DEFAULT;localStorage.x1backend=BACKEND;set.classList.remove('on');loadStatus();}
@@ -179,8 +179,9 @@ function add(c,html,nm){const d=document.createElement('div');d.className='row '
 document.getElementById('gear').onclick=()=>set.classList.add('on');
 document.getElementById('new').onclick=()=>{hist=[];msgs.innerHTML='<div class="row a"><div class="nm">x1</div>Naya chat. Bolo kya puchna hai.</div>';};
 inp.addEventListener('input',()=>{inp.style.height='auto';inp.style.height=Math.min(inp.scrollHeight,130)+'px';});
+
 document.getElementById('up').onclick=()=>document.getElementById('file').click();
-document.getElementById('file').onchange=e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{pendingImg=r.result;pvi.src=r.result;pv.classList.add('on');};r.readAsDataURL(f);};
+document.getElementById('file').onchange=e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{const im=new Image();im.onload=()=>{const mx=1280;let w=im.width,h=im.height;if(w>mx||h>mx){const s=Math.min(mx/w,mx/h);w=Math.round(w*s);h=Math.round(h*s);}const cn=document.createElement('canvas');cn.width=w;cn.height=h;cn.getContext('2d').drawImage(im,0,0,w,h);pendingImg=cn.toDataURL('image/jpeg',0.82);pvi.src=pendingImg;pv.classList.add('on');};im.src=r.result;};r.readAsDataURL(f);};
 document.getElementById('pvx').onclick=()=>{pendingImg='';pv.classList.remove('on');document.getElementById('file').value='';};
 
 function buildUpi(){
@@ -259,10 +260,11 @@ async function send(){
   const ty=add('a','<div class="nm">x1</div><span class="typing"><span></span><span></span><span></span></span>');
   busy=true;
   try{
-    const r=await fetch(BACKEND+'/api/chat',{method:'POST',headers:{'Content-Type':'application/json','X-User-Id':uid},body:JSON.stringify({messages:hist})});
+    const payload=hist.slice(0,-1).map(m=>Array.isArray(m.content)?{role:m.role,content:'[photo] '+m.content.map(x=>x.text||'').join(' ').trim()}:m).concat(hist.slice(-1));
+    const r=await fetch(BACKEND+'/api/chat',{method:'POST',headers:{'Content-Type':'application/json','X-User-Id':uid},body:JSON.stringify({messages:payload})});
     const j=await r.json();
     if(r.status===402){ty.remove();pay.classList.add('on');busy=false;return;}
-    if(!r.ok){ty.innerHTML='<div class="nm">x1</div>Error: '+esc(j.error||r.status);busy=false;return;}
+    if(!r.ok){ty.innerHTML='<div class="nm">x1</div>Error: '+esc(j.detail||j.error||r.status);busy=false;return;}
     ty.innerHTML='<div class="nm">'+shortModel(j.model)+'</div>'+render(j.reply);
     hist.push({role:'assistant',content:j.reply});
     loadStatus();
