@@ -37,10 +37,15 @@ header b{font-size:19px;letter-spacing:.5px;background:linear-gradient(135deg,#2
 .a ul,.a ol{margin:6px 0 6px 18px}.a li{margin:2px 0}
 .a h1,.a h2,.a h3{font-size:15px;margin:9px 0 5px}
 .a a{color:#22d3ee}
-.a pre{background:rgba(10,13,19,.85);border:1px solid #1e2433;border-radius:9px;padding:11px;overflow-x:auto;margin:8px 0}
+.a pre{position:relative;background:rgba(10,13,19,.9);border:1px solid #1e2433;border-radius:9px;padding:32px 11px 11px;overflow-x:auto;margin:8px 0}
 .a code{font-family:ui-monospace,Menlo,monospace;font-size:12.5px}
 .a pre code{color:#a5f3fc}
 .a :not(pre)>code{background:rgba(10,13,19,.85);border:1px solid #1e2433;border-radius:5px;padding:1px 5px;color:#a5f3fc}
+.a table{border-collapse:collapse;font-size:12.5px;margin:6px 0}
+.a td,.a th{border:1px solid #232a3a;padding:4px 7px}
+.cp{position:absolute;top:6px;right:6px;background:#1b2230;border:1px solid #2b3448;color:#9aa3b8;font-size:10px;padding:3px 9px;border-radius:6px;cursor:pointer;font-family:inherit;letter-spacing:.3px}
+.cp:hover{color:#e8eaf0;border-color:#3b4a66}
+.cp.done{color:#22d3ee;border-color:#1d4b55}
 .thumb{max-width:150px;border-radius:9px;display:block;margin-bottom:7px}
 #pv{display:none;padding:0 14px 8px}#pv.on{display:block}
 #pv img{height:52px;border-radius:8px;border:1px solid #232a3a}
@@ -111,7 +116,7 @@ header b{font-size:19px;letter-spacing:.5px;background:linear-gradient(135deg,#2
   <input id="b">
   <button onclick="toggleMotion()">background motion on/off</button>
   <button onclick="save()">save &amp; close</button>
-  <small>Backend tumhara Render URL hai (dikhna normal hai).</small>
+  <small>Backend tumhara Render URL hai.</small>
 </div>
 
 <div class="ov" id="pay">
@@ -140,7 +145,7 @@ header b{font-size:19px;letter-spacing:.5px;background:linear-gradient(135deg,#2
       <input id="code" placeholder="unlock code (optional)" style="letter-spacing:0">
       <button onclick="unlock()">Code</button>
     </div>
-    <small>UTR daalne ke baad PRO on ho jayega. UTR payment ke baad UPI app me "History" me milta hai.</small>
+    <small>UTR daalne ke baad PRO on ho jayega.</small>
   </div>
 </div>
 
@@ -176,6 +181,31 @@ function toast(t){const e=document.getElementById('toast');e.textContent=t;e.cla
 function updateCnt(){if(premium){cnt.textContent=daysLeft>0?'PRO · '+daysLeft+'d':'PRO';cnt.className='cnt pro';}else{cnt.textContent=remaining+' left';cnt.className='cnt';}}
 function save(){BACKEND=document.getElementById('b').value.trim().replace(/\/$/,'')||BACKEND_DEFAULT;localStorage.x1backend=BACKEND;set.classList.remove('on');loadStatus();}
 function add(c,html,nm){const d=document.createElement('div');d.className='row '+c;d.innerHTML=(nm?'<div class="nm">'+nm+'</div>':'')+html;msgs.appendChild(d);msgs.scrollTop=msgs.scrollHeight;return d;}
+
+function copyText(t){
+  if(navigator.clipboard&&navigator.clipboard.writeText) return navigator.clipboard.writeText(t);
+  const ta=document.createElement('textarea');ta.value=t;ta.style.position='fixed';ta.style.opacity='0';
+  document.body.appendChild(ta);ta.select();try{document.execCommand('copy');}catch(e){}ta.remove();
+  return Promise.resolve();
+}
+function addCopyButtons(root){
+  root.querySelectorAll('pre').forEach(function(pre){
+    if(pre.querySelector('.cp'))return;
+    const b=document.createElement('button');
+    b.className='cp';b.type='button';b.textContent='copy';
+    b.onclick=function(ev){
+      ev.stopPropagation();
+      const codeEl=pre.querySelector('code');
+      const txt=codeEl?codeEl.innerText:pre.innerText;
+      copyText(txt).then(function(){
+        b.textContent='copied';b.classList.add('done');
+        setTimeout(function(){b.textContent='copy';b.classList.remove('done');},1500);
+      });
+    };
+    pre.appendChild(b);
+  });
+}
+
 document.getElementById('gear').onclick=()=>set.classList.add('on');
 document.getElementById('new').onclick=()=>{hist=[];msgs.innerHTML='<div class="row a"><div class="nm">x1</div>Naya chat. Bolo kya puchna hai.</div>';};
 inp.addEventListener('input',()=>{inp.style.height='auto';inp.style.height=Math.min(inp.scrollHeight,130)+'px';});
@@ -266,6 +296,7 @@ async function send(){
     if(r.status===402){ty.remove();pay.classList.add('on');busy=false;return;}
     if(!r.ok){ty.innerHTML='<div class="nm">x1</div>Error: '+esc(j.detail||j.error||r.status);busy=false;return;}
     ty.innerHTML='<div class="nm">'+shortModel(j.model)+'</div>'+render(j.reply);
+    addCopyButtons(ty);
     hist.push({role:'assistant',content:j.reply});
     loadStatus();
   }catch(e){ty.innerHTML='<div class="nm">x1</div>Error: '+esc(e.message);}
