@@ -8,6 +8,7 @@
 <title>X1</title>
 <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
 <style>
 *{box-sizing:border-box;margin:0;-webkit-tap-highlight-color:transparent}
 body{background:#0b0d12;color:#e8eaf0;height:100dvh;display:flex;flex-direction:column;font-family:Inter,system-ui,-apple-system,sans-serif;overflow:hidden}
@@ -43,15 +44,22 @@ header b{font-size:19px;letter-spacing:.5px;background:linear-gradient(135deg,#2
 .a :not(pre)>code{background:rgba(10,13,19,.85);border:1px solid #1e2433;border-radius:5px;padding:1px 5px;color:#a5f3fc}
 .a table{border-collapse:collapse;font-size:12.5px;margin:6px 0}
 .a td,.a th{border:1px solid #232a3a;padding:4px 7px}
-.cp{position:absolute;top:6px;right:6px;background:#1b2230;border:1px solid #2b3448;color:#9aa3b8;font-size:10px;padding:3px 9px;border-radius:6px;cursor:pointer;font-family:inherit;letter-spacing:.3px}
-.cp:hover{color:#e8eaf0;border-color:#3b4a66}
+.cp{position:absolute;top:6px;right:6px;background:#1b2230;border:1px solid #2b3448;color:#9aa3b8;font-size:10px;padding:3px 9px;border-radius:6px;cursor:pointer;font-family:inherit}
 .cp.done{color:#22d3ee;border-color:#1d4b55}
+.spk{background:none;border:none;color:#6b7385;font-size:11px;cursor:pointer;padding:2px 0;margin-top:6px}
+.spk:hover{color:#22d3ee}
 .thumb{max-width:150px;border-radius:9px;display:block;margin-bottom:7px}
+.genimg{max-width:100%;border-radius:11px;display:block;border:1px solid #1e2433}
+.imgbar{display:flex;gap:8px;margin-top:7px}
+.imgbar a{font-size:11px;color:#22d3ee;text-decoration:none;border:1px solid #1d4b55;background:rgba(13,43,49,.7);padding:4px 10px;border-radius:7px}
+.spin{width:26px;height:26px;border:2px solid #232a3a;border-top-color:#22d3ee;border-radius:50%;animation:sp .8s linear infinite;margin:10px auto}
+@keyframes sp{to{transform:rotate(360deg)}}
 #pv{display:none;padding:0 14px 8px}#pv.on{display:block}
 #pv img{height:52px;border-radius:8px;border:1px solid #232a3a}
 #pv span{font-size:11px;color:#8b93a7;margin-left:8px;cursor:pointer}
-#bar{display:flex;gap:8px;padding:11px 12px;border-top:1px solid #1c2130;align-items:flex-end;background:rgba(11,13,18,.55)}
-#up{width:44px;height:44px;flex-shrink:0;background:rgba(20,25,38,.75);border:1px solid #232a3a;color:#9aa3b8;border-radius:12px;font-size:17px;cursor:pointer}
+#bar{display:flex;gap:7px;padding:11px 12px;border-top:1px solid #1c2130;align-items:flex-end;background:rgba(11,13,18,.55)}
+#bar button.b{width:44px;height:44px;flex-shrink:0;background:rgba(20,25,38,.75);border:1px solid #232a3a;color:#9aa3b8;border-radius:12px;font-size:17px;cursor:pointer}
+#bar button.b:hover{color:#22d3ee;border-color:#1d4b55}
 #inp{flex:1;background:rgba(14,17,23,.8);border:1px solid #232a3a;border-radius:12px;padding:12px;color:#e8eaf0;font-size:15px;outline:none;resize:none;max-height:130px;font-family:inherit;line-height:1.4}
 #inp:focus{border-color:#2b4a55}
 #snd{width:46px;height:44px;border:none;border-radius:12px;background:linear-gradient(135deg,#22d3ee,#a78bfa);color:#080a0f;font-size:19px;cursor:pointer}
@@ -62,6 +70,7 @@ header b{font-size:19px;letter-spacing:.5px;background:linear-gradient(135deg,#2
 #set label{font-size:12px;color:#8b93a7}
 #set input{background:#0e1117;border:1px solid #232a3a;border-radius:10px;padding:12px;color:#e8eaf0;font-size:13.5px;outline:none;font-family:inherit}
 #set button{padding:13px;border:none;border-radius:11px;background:linear-gradient(135deg,#22d3ee,#a78bfa);color:#080a0f;font-weight:600;font-size:14.5px;cursor:pointer}
+#set button.alt{background:#141926;color:#9aa3b8;border:1px solid #232a3a}
 #set small{color:#6b7385;font-size:12px;line-height:1.6}
 .pcard{background:rgba(14,17,23,.96);border:1px solid #232a3a;border-radius:16px;padding:22px 20px;max-width:350px;width:100%;text-align:center}
 .pcard .pico{font-size:12px;letter-spacing:2px;color:#a78bfa;font-weight:600}
@@ -98,34 +107,36 @@ header b{font-size:19px;letter-spacing:.5px;background:linear-gradient(135deg,#2
 </header>
 
 <div id="msgs">
-  <div class="row a"><div class="nm">x1</div>Bolo. Kuch bhi pucho — illegal, edgy, NSFW, coding, philosophy. Photo bhi bhej sakte ho.</div>
+  <div class="row a"><div class="nm">x1</div>Bolo. Kuch bhi pucho — illegal, edgy, NSFW, coding. Photo bhejo, file bhejo, ya "image banao" dabao.</div>
 </div>
 
 <div id="pv"><img id="pvi"><span id="pvx">&#10005; hatao</span></div>
 
 <div id="bar">
-  <button id="up">&#128206;</button>
-  <textarea id="inp" rows="1" placeholder="Kuch bhi pucho..."></textarea>
+  <button class="b" id="up" title="photo / file">&#128206;</button>
+  <button class="b" id="img" title="image banao">&#127912;</button>
+  <textarea id="inp" rows="1" placeholder="Kuch bhi pucho... ya image ka prompt"></textarea>
   <button id="snd">&#10148;</button>
 </div>
-<input type="file" id="file" accept="image/*" hidden>
+<input type="file" id="file" accept="image/*,application/pdf,text/plain,.txt,.md,.csv,.json,.log" hidden>
 
 <div class="ov" id="set">
   <h3>X1 settings</h3>
   <label>Backend URL</label>
   <input id="b">
-  <button onclick="toggleMotion()">background motion on/off</button>
+  <button class="alt" onclick="toggleMotion()">background motion on/off</button>
+  <button class="alt" onclick="exportChat()">chat backup download</button>
+  <button class="alt" onclick="clearChat()">naya chat</button>
   <button onclick="save()">save &amp; close</button>
-  <small>Backend tumhara Render URL hai.</small>
+  <small>Image generation free hai (Pollinations). File upload: photo, PDF, txt, csv, json.</small>
 </div>
 
 <div class="ov" id="pay">
   <div class="pcard">
     <div class="pico">X1 PRO</div>
     <h3>Aaj ke free messages khatam</h3>
-    <p>Har din 7 free messages milte hain. Kal phir milenge — ya abhi X1 PRO le lo unlimited ke liye.</p>
+    <p>Har din 7 free messages. Kal phir milenge — ya abhi X1 PRO le lo unlimited ke liye.</p>
     <div class="price">&#8377;<span id="amt">99</span> <small>/ month</small></div>
-
     <div class="psteps">
       <b>Kaise karein:</b><br>
       1. Neeche "Pay via UPI" dabao<br>
@@ -133,19 +144,16 @@ header b{font-size:19px;letter-spacing:.5px;background:linear-gradient(135deg,#2
       3. Payment ka <b>12-digit UTR</b> copy karo<br>
       4. Neeche UTR daal ke Verify dabao
     </div>
-
     <a class="pbtn" id="upibtn" href="#">Pay via UPI</a>
     <div class="prow">
       <input id="utr" inputmode="numeric" maxlength="12" placeholder="12-digit UTR">
       <button onclick="claim()">Verify</button>
     </div>
     <button class="pbtn alt" id="rzpbtn" style="display:none" onclick="buy()">Pay online (card/UPI)</button>
-
     <div class="prow" style="margin-top:4px">
-      <input id="code" placeholder="unlock code (optional)" style="letter-spacing:0">
+      <input id="code" placeholder="unlock code" style="letter-spacing:0">
       <button onclick="unlock()">Code</button>
     </div>
-    <small>UTR daalne ke baad PRO on ho jayega.</small>
   </div>
 </div>
 
@@ -167,7 +175,7 @@ function getUid(){
 const uid=getUid();
 
 let premium=false, remaining=7, upi='9625399958@fam', price=99, rzpOn=false, daysLeft=0;
-let hist=[], busy=false, used='', pendingImg='';
+let hist=[], busy=false, pendingImg='', pendingText='';
 
 const msgs=document.getElementById('msgs'),inp=document.getElementById('inp'),snd=document.getElementById('snd'),set=document.getElementById('set'),pay=document.getElementById('pay'),cnt=document.getElementById('cnt'),pv=document.getElementById('pv'),pvi=document.getElementById('pvi');
 
@@ -188,39 +196,114 @@ function copyText(t){
   document.body.appendChild(ta);ta.select();try{document.execCommand('copy');}catch(e){}ta.remove();
   return Promise.resolve();
 }
-function addCopyButtons(root){
+function extras(root,plain){
   root.querySelectorAll('pre').forEach(function(pre){
     if(pre.querySelector('.cp'))return;
-    const b=document.createElement('button');
-    b.className='cp';b.type='button';b.textContent='copy';
-    b.onclick=function(ev){
-      ev.stopPropagation();
-      const codeEl=pre.querySelector('code');
-      const txt=codeEl?codeEl.innerText:pre.innerText;
-      copyText(txt).then(function(){
+    const b=document.createElement('button');b.className='cp';b.type='button';b.textContent='copy';
+    b.onclick=function(ev){ev.stopPropagation();
+      const c=pre.querySelector('code');copyText(c?c.innerText:pre.innerText).then(function(){
         b.textContent='copied';b.classList.add('done');
-        setTimeout(function(){b.textContent='copy';b.classList.remove('done');},1500);
-      });
-    };
+        setTimeout(function(){b.textContent='copy';b.classList.remove('done');},1500);});};
     pre.appendChild(b);
   });
+  if(plain&&window.speechSynthesis){
+    const s=document.createElement('button');s.className='spk';s.type='button';s.textContent='speak';
+    s.onclick=function(){speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(plain.slice(0,4000));speechSynthesis.speak(u);};
+    root.appendChild(s);
+  }
 }
 
 document.getElementById('gear').onclick=()=>set.classList.add('on');
-document.getElementById('new').onclick=()=>{hist=[];msgs.innerHTML='<div class="row a"><div class="nm">x1</div>Naya chat. Bolo kya puchna hai.</div>';};
+document.getElementById('new').onclick=()=>clearChat();
+function clearChat(){hist=[];msgs.innerHTML='<div class="row a"><div class="nm">x1</div>Naya chat. Bolo kya puchna hai.</div>';}
 inp.addEventListener('input',()=>{inp.style.height='auto';inp.style.height=Math.min(inp.scrollHeight,130)+'px';});
 
-document.getElementById('up').onclick=()=>document.getElementById('file').click();
-document.getElementById('file').onchange=e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{const im=new Image();im.onload=()=>{const mx=1280;let w=im.width,h=im.height;if(w>mx||h>mx){const s=Math.min(mx/w,mx/h);w=Math.round(w*s);h=Math.round(h*s);}const cn=document.createElement('canvas');cn.width=w;cn.height=h;cn.getContext('2d').drawImage(im,0,0,w,h);pendingImg=cn.toDataURL('image/jpeg',0.82);pvi.src=pendingImg;pv.classList.add('on');};im.src=r.result;};r.readAsDataURL(f);};
-document.getElementById('pvx').onclick=()=>{pendingImg='';pv.classList.remove('on');document.getElementById('file').value='';};
-
-function buildUpi(){
-  const link='upi://pay?pa='+encodeURIComponent(upi)+'&pn='+encodeURIComponent('X1 PRO')+'&am='+price+'&cu=INR&tn=X1PRO';
-  document.getElementById('upibtn').href=link;
+function exportChat(){
+  if(!hist.length){toast('Chat khali hai');return;}
+  let out='X1 CHAT BACKUP\n'+new Date().toLocaleString()+'\n\n';
+  hist.forEach(function(m){
+    const who=m.role==='user'?'YOU':'X1';
+    let txt=Array.isArray(m.content)?m.content.map(function(x){return x.text||'[photo]';}).join(' '):m.content;
+    out+='['+who+']\n'+txt+'\n\n';
+  });
+  const a=document.createElement('a');
+  a.href='data:text/plain;charset=utf-8,'+encodeURIComponent(out);
+  a.download='x1-chat-'+Date.now()+'.txt';a.click();
+  toast('Backup download ho gaya');
 }
 
+/* ---------- FILE UPLOAD ---------- */
+document.getElementById('up').onclick=()=>document.getElementById('file').click();
+document.getElementById('file').onchange=function(e){
+  const f=e.target.files[0]; if(!f) return;
+  if(f.type.indexOf('image')===0){
+    const r=new FileReader();
+    r.onload=function(){
+      const im=new Image();
+      im.onload=function(){
+        const mx=1280;let w=im.width,h=im.height;
+        if(w>mx||h>mx){const s=Math.min(mx/w,mx/h);w=Math.round(w*s);h=Math.round(h*s);}
+        const cn=document.createElement('canvas');cn.width=w;cn.height=h;
+        cn.getContext('2d').drawImage(im,0,0,w,h);
+        pendingImg=cn.toDataURL('image/jpeg',0.82);
+        pvi.src=pendingImg;pv.classList.add('on');
+      };
+      im.src=r.result;
+    };
+    r.readAsDataURL(f);
+    return;
+  }
+  if(f.type==='application/pdf'&&window.pdfjsLib){
+    const r=new FileReader();
+    r.onload=function(){
+      pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js';
+      pdfjsLib.getDocument({data:new Uint8Array(r.result)}).promise.then(function(pdf){
+        let txt='',p=0;
+        const step=function(){
+          if(p>=Math.min(pdf.numPages,20)){pendingText='[PDF: '+f.name+']\n'+txt;inp.value=pendingText;inp.style.height='auto';toast('PDF padha gaya');return;}
+          pdf.getPage(p+1).then(function(pg){return pg.getTextContent();}).then(function(c){
+            txt+=c.items.map(function(i){return i.str;}).join(' ')+'\n';p++;step();});
+        };
+        step();
+      });
+    };
+    r.readAsArrayBuffer(f);
+    return;
+  }
+  const r=new FileReader();
+  r.onload=function(){
+    pendingText='[FILE: '+f.name+']\n'+String(r.result).slice(0,8000);
+    inp.value=pendingText;inp.style.height='auto';
+    toast('File padhi gayi');
+  };
+  r.readAsText(f);
+};
+document.getElementById('pvx').onclick=function(){pendingImg='';pv.classList.remove('on');document.getElementById('file').value='';};
+
+/* ---------- IMAGE GENERATION ---------- */
+document.getElementById('img').onclick=function(){
+  const t=inp.value.trim();
+  if(!t){toast('Pehle prompt likho');return;}
+  inp.value='';inp.style.height='auto';
+  add('u','image: '+esc(t));
+  const d=add('a','<div class="nm">x1 · image</div><div class="spin"></div>');
+  const url='https://image.pollinations.ai/prompt/'+encodeURIComponent(t)+'?width=1024&height=1024&nologo=true&seed='+Math.floor(Math.random()*999999);
+  const im=new Image();
+  im.onload=function(){
+    d.innerHTML='<div class="nm">x1 · image</div><img class="genimg" src="'+url+'"><div class="imgbar"><a href="'+url+'" download="x1.png" target="_blank">download</a></div>';
+    msgs.scrollTop=msgs.scrollHeight;
+  };
+  im.onerror=function(){d.innerHTML='<div class="nm">x1 · image</div>Image fail hui, dobara try karo.';};
+  im.src=url;
+  hist.push({role:'user',content:'[image generated] '+t});
+};
+
+/* ---------- PREMIUM ---------- */
+function buildUpi(){
+  document.getElementById('upibtn').href='upi://pay?pa='+encodeURIComponent(upi)+'&pn='+encodeURIComponent('X1 PRO')+'&am='+price+'&cu=INR&tn=X1PRO';
+}
 let pollTimer=null;
-function poll(){if(pollTimer)return;pollTimer=setInterval(async()=>{await loadStatus();if(premium){clearInterval(pollTimer);pollTimer=null;}},8000);}
+function poll(){if(pollTimer)return;pollTimer=setInterval(async function(){await loadStatus();if(premium){clearInterval(pollTimer);pollTimer=null;}},8000);}
 
 async function loadStatus(){
   try{
@@ -241,13 +324,12 @@ async function loadStatus(){
 async function claim(){
   const utr=document.getElementById('utr').value.replace(/\D/g,'');
   if(utr.length!==12){alert('UTR 12 digit ka hota hai');return;}
-  const r=await fetch(BACKEND+'/api/claim',{method:'POST',headers:{'Content-Type':'application/json','X-User-Id':uid},body:JSON.stringify({utr})});
+  const r=await fetch(BACKEND+'/api/claim',{method:'POST',headers:{'Content-Type':'application/json','X-User-Id':uid},body:JSON.stringify({utr:utr})});
   const j=await r.json();
   if(j.success){
     if(j.premium){premium=true;updateCnt();pay.classList.remove('on');toast('Payment verified — X1 PRO activated');}
     else{pay.classList.remove('on');toast('UTR bhej diya — approve hone ke baad PRO on hoga');poll();}
-  }
-  else alert(j.error||'Verify nahi hua');
+  } else alert(j.error||'Verify nahi hua');
 }
 
 async function unlock(){
@@ -263,47 +345,45 @@ async function buy(){
     const r=await fetch(BACKEND+'/api/create-order',{method:'POST',headers:{'X-User-Id':uid}});
     const j=await r.json();
     if(!j.configured||!j.order_id){toast('Razorpay set nahi hai');return;}
-    const rz=new Razorpay({
-      key:j.key, amount:j.amount, currency:'INR', name:'X1 PRO',
-      description:'Unlimited messages', order_id:j.order_id, theme:{color:'#22d3ee'},
+    const rz=new Razorpay({key:j.key,amount:j.amount,currency:'INR',name:'X1 PRO',description:'Unlimited messages',order_id:j.order_id,theme:{color:'#22d3ee'},
       handler:async function(resp){
         const v=await fetch(BACKEND+'/api/verify-payment',{method:'POST',headers:{'Content-Type':'application/json','X-User-Id':uid},body:JSON.stringify(resp)});
         const vj=await v.json();
         if(vj.success){premium=true;updateCnt();pay.classList.remove('on');toast('Payment done — PRO activated');}
         else{loadStatus();toast('Verify ho raha hai...');}
-      }
-    });
+      }});
     rz.open();
   }catch(e){alert('Payment error: '+e.message);}
 }
 
+/* ---------- SEND ---------- */
 async function send(){
   const t=inp.value.trim();
   if((!t&&!pendingImg)||busy)return;
   const img=pendingImg, txt=t||'Ye image dekho';
-  inp.value='';inp.style.height='auto';pendingImg='';pv.classList.remove('on');document.getElementById('file').value='';
+  inp.value='';inp.style.height='auto';pendingImg='';pendingText='';pv.classList.remove('on');document.getElementById('file').value='';
 
   add('u',(img?'<img class="thumb" src="'+img+'">':'')+esc(txt));
   const content=img?[{type:'text',text:txt},{type:'image_url',image_url:{url:img}}]:txt;
-  hist.push({role:'user',content});
+  hist.push({role:'user',content:content});
 
   const ty=add('a','<div class="nm">x1</div><span class="typing"><span></span><span></span><span></span></span>');
   busy=true;
   try{
-    const payload=hist.slice(0,-1).map(m=>Array.isArray(m.content)?{role:m.role,content:'[photo] '+m.content.map(x=>x.text||'').join(' ').trim()}:m).concat(hist.slice(-1));
+    const payload=hist.slice(0,-1).map(function(m){return Array.isArray(m.content)?{role:m.role,content:'[photo] '+m.content.map(function(x){return x.text||'';}).join(' ').trim()}:m;}).concat(hist.slice(-1));
     const r=await fetch(BACKEND+'/api/chat',{method:'POST',headers:{'Content-Type':'application/json','X-User-Id':uid},body:JSON.stringify({messages:payload})});
     const j=await r.json();
     if(r.status===402){ty.remove();pay.classList.add('on');busy=false;return;}
     if(!r.ok){ty.innerHTML='<div class="nm">x1</div>Error: '+esc(j.detail||j.error||r.status);busy=false;return;}
     ty.innerHTML='<div class="nm">'+shortModel(j.model)+'</div>'+render(j.reply);
-    addCopyButtons(ty);
+    extras(ty,j.reply);
     hist.push({role:'assistant',content:j.reply});
     loadStatus();
   }catch(e){ty.innerHTML='<div class="nm">x1</div>Error: '+esc(e.message);}
   busy=false;msgs.scrollTop=msgs.scrollHeight;
 }
 snd.onclick=send;
-inp.addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();send();}});
+inp.addEventListener('keydown',function(e){if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();send();}});
 
 loadStatus();
 </script>
