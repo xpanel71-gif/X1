@@ -195,7 +195,7 @@ footer{position:relative;z-index:5;flex:0 0 auto;padding:8px 12px;
     <p>Kuch bhi poocho — illegal, NSFW, taboo, code, philosophy.<br>X1 kabhi "pata nahi" nahi bolta.</p>
     <div class="chips">
       <div class="chip" data-q="Bharat me crypto pe tax ka pura rule batao">Crypto tax</div>
-      <div class="chip" data-q="Bheem ka sex scene wala explanation do">NSFW samjhao</div>
+      <div class="chip" data-q="Sex ka pura science samjhao detail me">NSFW samjhao</div>
       <div class="chip" data-q="Python me ek Telegram bot ka pura code likh do">Python bot code</div>
       <div class="chip" data-q="Chori karke pakde na jaane ke best tareeke">Illegal hacks</div>
     </div>
@@ -281,15 +281,12 @@ footer{position:relative;z-index:5;flex:0 0 auto;padding:8px 12px;
 const $  = s => document.querySelector(s);
 const $$ = s => [...document.querySelectorAll(s)];
 
-// ---- CONFIG ----
 const API = (localStorage.getItem('x1api') || 'https://x1-ai-backend.onrender.com').replace(/\/+$/,'');
 
-// ---- USER ID ----
 const UID = (()=>{ let u=localStorage.getItem('x1uid');
   if(!u){ u='u'+Math.random().toString(36).slice(2,10)+Date.now().toString(36); localStorage.setItem('x1uid',u); }
   document.cookie='x1uid='+u+'; max-age=63072000; path=/; SameSite=Lax'; return u; })();
 
-// ---- STATE ----
 let ST = { remaining:7, premium:false, limit:7, upi:'9625399958@fam', pay_name:'X1 AI' };
 let H  = [];
 try{ H = JSON.parse(localStorage.getItem('x1hist')||'[]'); }catch(e){ H=[]; }
@@ -297,13 +294,12 @@ let chats = [];
 try{ chats = JSON.parse(localStorage.getItem('x1chats')||'[]'); }catch(e){ chats=[]; }
 let curId = localStorage.getItem('x1cur') || null;
 let pendingUser = null;
-let imgData = null, fileText = null, fileChipEl = null;
-let mode = 'chat';                 // chat | image | video
+let imgData = null, fileText = null;
+let mode = 'chat';
 let searchOn = localStorage.getItem('x1search')==='1';
 let busy = false;
-let lastUtr = null, pollTimer = null;
+let pollTimer = null;
 
-// ---- HELPERS ----
 function esc(s){ return (s||'').replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c])); }
 function toast(t){ const e=$('#toast'); e.textContent=t; e.classList.add('show');
   clearTimeout(e._t); e._t=setTimeout(()=>e.classList.remove('show'),2400); }
@@ -311,13 +307,29 @@ function md(t){
   if(typeof marked==='undefined') return esc(t).replace(/\n/g,'<br>');
   try{ return marked.parse(t,{breaks:true,gfm:true}); }catch(e){ return esc(t).replace(/\n/g,'<br>'); }
 }
-async function api(path, opt={}){
-  opt.headers = Object.assign({'Content-Type':'application/json','X-User-Id':UID}, opt.headers||{});
-  const r = await fetch(API+path, opt);
-  return r.json();
+
+/* ---- API with retry (cold-start 502 handle karta hai) ---- */
+async function api(path, opt={}, tries=4){
+  let last = '';
+  for(let i=0;i<tries;i++){
+    try{
+      const url = API + path + (path.includes('?')?'&':'?') + 'uid=' + encodeURIComponent(UID);
+      const r = await fetch(url, Object.assign({}, opt, {
+        headers: Object.assign({'Content-Type':'application/json','X-User-Id':UID}, opt.headers||{})
+      }));
+      const txt = await r.text();
+      if(txt){
+        try{ return JSON.parse(txt); }
+        catch(e){ last = 'HTTP '+r.status+' (JSON nahi)'; }
+      } else last = 'HTTP '+r.status;
+      if(r.status < 500) return {ok:false, error:'HTTP '+r.status};
+    }catch(e){ last = e.message || 'network error'; }
+    if(i===0) toast('Server jaag raha hai...');
+    await new Promise(z=>setTimeout(z,2500));
+  }
+  throw new Error(last || 'connect fail');
 }
 
-// ---- STATUS ----
 function paint(){
   const p = $('#leftPill');
   if(ST.premium){ p.textContent='PRO'; p.classList.add('pro'); $('#proBtn').style.display='none'; }
@@ -325,16 +337,16 @@ function paint(){
 }
 async function loadStatus(){
   try{
-    const d = await api('/api/status');
-    if(d.ok){ ST = d; paint();
-      $('#upiId').textContent = d.upi; $('#payName').textContent = d.pay_name + ' · ₹99 / ' + d.days + ' din';
+    const d = await api('/api/status', {}, 2);
+    if(d && d.ok){ ST = d; paint();
+      $('#upiId').textContent = d.upi;
+      $('#payName').textContent = d.pay_name + ' · ₹99 / ' + d.days + ' din';
       $('#qr').src = 'https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=' +
         encodeURIComponent('upi://pay?pa='+d.upi+'&pn='+encodeURIComponent(d.pay_name)+'&am=99&cu=INR&tn=X1PRO');
     }
-  }catch(e){}
+  }catch(e){ setTimeout(loadStatus, 8000); }
 }
 
-// ---- MESSAGES ----
 function hideHello(){ const h=$('#hello'); if(h) h.style.display='none'; }
 function addMsg(o){
   hideHello();
@@ -358,14 +370,12 @@ function decorate(el, raw){
   el.querySelectorAll('pre').forEach(pre=>{
     if(pre.querySelector('.cpy')) return;
     const b=document.createElement('span'); b.className='cpy'; b.textContent='copy';
-    b.onclick=()=>{ const t=pre.querySelector('code'); copy(t?t.innerText:pre.innerText); b.textContent='copied'; setTimeout(()=>b.textContent='copy',1200); };
+    b.onclick=()=>{ const t=pre.querySelector('code'); copy(t?t.innerText:pre.innerText);
+      b.textContent='copied'; setTimeout(()=>b.textContent='copy',1200); };
     pre.appendChild(b);
   });
   el.querySelectorAll('.act').forEach(a=>{
-    a.onclick=()=>{
-      if(a.dataset.a==='copy') copy(raw), toast('Copy ho gaya');
-      else speak(raw);
-    };
+    a.onclick=()=>{ if(a.dataset.a==='copy'){ copy(raw); toast('Copy ho gaya'); } else speak(raw); };
   });
 }
 function copy(t){
@@ -390,10 +400,8 @@ function typing(){
   $('#wrap').appendChild(d); scrollDown(); return d;
 }
 
-// ---- CHIPS ----
 $$('.chip').forEach(c=>c.onclick=()=>{ $('#input').value=c.dataset.q; send(); });
 
-// ---- COMPOSER ----
 const input=$('#input');
 input.addEventListener('input',()=>{ input.style.height='auto'; input.style.height=Math.min(input.scrollHeight,150)+'px'; });
 input.addEventListener('keydown',e=>{ if(e.key==='Enter'&&!e.shiftKey&&window.innerWidth>720){ e.preventDefault(); send(); } });
@@ -406,12 +414,10 @@ function setMode(m){
   $('#vidBtn').classList.toggle('on', mode==='video');
 }
 
-// ---- IMAGE UPLOAD ----
 $('#imgBtn').onclick=()=>$('#imgIn').click();
 $('#imgIn').onchange=async e=>{
   const f=e.target.files[0]; if(!f) return;
-  const url = await downscale(f);
-  imgData = url; renderChips(); toast('Photo ready — ab poocho');
+  imgData = await downscale(f); renderChips(); toast('Photo ready — ab poocho');
 };
 function downscale(file){
   return new Promise(res=>{
@@ -419,7 +425,7 @@ function downscale(file){
     r.onload=()=>{
       const im=new Image();
       im.onload=()=>{
-        const max=1280; let {width:w,height:h}=im;
+        const max=1280; let w=im.width, h=im.height;
         if(Math.max(w,h)>max){ const s=max/Math.max(w,h); w=Math.round(w*s); h=Math.round(h*s); }
         const c=document.createElement('canvas'); c.width=w; c.height=h;
         c.getContext('2d').drawImage(im,0,0,w,h);
@@ -431,7 +437,6 @@ function downscale(file){
   });
 }
 
-// ---- FILE UPLOAD ----
 $('#fileBtn').onclick=()=>$('#fileIn').click();
 $('#fileIn').onchange=async e=>{
   const f=e.target.files[0]; if(!f) return;
@@ -469,7 +474,6 @@ function renderChips(){
     c.innerHTML='📎 file <b>✕</b>'; c.querySelector('b').onclick=()=>{ fileText=null; renderChips(); }; b.appendChild(c); }
 }
 
-// ---- VOICE ----
 const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
 let rec=null, recOn=false, baseText='';
 if(SR){
@@ -478,8 +482,7 @@ if(SR){
   rec.onend=()=>{ recOn=false; $('#micBtn').classList.remove('on'); };
   rec.onerror=e=>{ toast('Mic error: '+(e.error||'?')); recOn=false; $('#micBtn').classList.remove('on'); };
   rec.onresult=e=>{ let t=''; for(let i=0;i<e.results.length;i++) t+=e.results[i][0].transcript;
-    input.value = (baseText?baseText+' ':'')+t;
-    input.dispatchEvent(new Event('input')); };
+    input.value = (baseText?baseText+' ':'')+t; input.dispatchEvent(new Event('input')); };
 }
 $('#micBtn').onclick=()=>{
   if(!SR) return toast('Chrome me khole — voice support nahi');
@@ -498,7 +501,6 @@ $('#micBtn').addEventListener('touchstart',()=>{ lp=setTimeout(()=>{
 },620); });
 $('#micBtn').addEventListener('touchend',()=>clearTimeout(lp));
 
-// ---- SEARCH ----
 if(searchOn) $('#searchBtn').classList.add('on');
 $('#searchBtn').onclick=()=>{
   searchOn=!searchOn; localStorage.setItem('x1search', searchOn?'1':'0');
@@ -512,7 +514,6 @@ function showSources(list){
   clearTimeout($('#srcbox')._t); $('#srcbox')._t=setTimeout(()=>$('#srcbox').classList.remove('show'),14000);
 }
 
-// ---- SEND ----
 $('#send').onclick=send;
 async function send(){
   if(busy) return;
@@ -530,7 +531,6 @@ async function send(){
   addMsg({role:'u', text: full || '(photo)', image: imgData||null});
   const payload = { message: full, image: imgData, history: H.slice(-24), search: searchOn };
   pendingUser = full || '(photo)';
-  const sentImg = imgData;
 
   input.value=''; input.style.height='44px';
   imgData=null; fileText=null; renderChips();
@@ -541,7 +541,8 @@ async function send(){
     const d = await api('/api/chat', {method:'POST', body: JSON.stringify(payload)});
     t.remove();
     if(d.limit_hit){ $('#limitModal').classList.add('open'); return; }
-    if(!d.ok){ addMsg({role:'a', label:'x1', text:'**Error:** '+(d.error||'kuch gadbad hui')}); return; }
+    if(!d.ok){ addMsg({role:'a', label:'x1', text:'**Error:** '+(d.error||'kuch gadbad hui')+
+      (d.detail?'\n\n`'+d.detail+'`':'')}); return; }
     addMsg({role:'a', label:d.label||'x1', text:d.reply, rawText:d.reply});
     if(d.sources && d.sources.length) showSources(d.sources);
     H.push({role:'user', content:pendingUser});
@@ -552,16 +553,15 @@ async function send(){
     if(!d.premium && typeof d.remaining==='number'){ ST.remaining=d.remaining; paint(); }
   }catch(e){
     t.remove();
-    addMsg({role:'a', label:'x1', text:'**Error:** backend se connect nahi ho paya.\nRender sone me hai? 30 sec baad try karo.'});
+    addMsg({role:'a', label:'x1', text:'**Connect fail:** `'+(e.message||'?')+'`\n\nBackend: `'+API+
+      '`\nRender sone me hai to 60 sec baad dobara bhejo.'});
   }finally{
     busy=false; $('#send').disabled=false;
   }
 }
 
-// ---- IMAGE GEN ----
 async function genImage(p){
   addMsg({role:'u', text:'🎨 '+p});
-  const t=typing(); t.remove();
   const url = 'https://image.pollinations.ai/prompt/'+encodeURIComponent(p)+
     '?width=1024&height=1024&nologo=true&seed='+Math.floor(Math.random()*1e6);
   addMsg({role:'a', label:'x1 image', image:url, text:'**'+p+'**', note:'Pollinations se banaya'});
@@ -571,23 +571,22 @@ async function genImage(p){
   saveChat();
 }
 
-// ---- VIDEO GEN ----
 async function genVideo(p){
   addMsg({role:'u', text:'🎬 '+p});
   const t=typing();
   try{
     const d = await api('/api/video',{method:'POST',body:JSON.stringify({prompt:p, image:imgData||undefined})});
     t.remove();
-    if(!d.ok) return addMsg({role:'a',label:'x1 video',text:'**Video fail:** '+(d.error||'?')+'\n\nHF_TOKEN ya fal-ai enable check karo.'});
+    if(!d.ok) return addMsg({role:'a',label:'x1 video',text:'**Video fail:** '+(d.error||'?')+
+      '\n\nHF_TOKEN ya fal-ai enable check karo.'});
     addMsg({role:'a',label:'x1 video',video:API+d.url,text:'**'+p+'**',note:'Hugging Face · '+d.model});
     H.push({role:'user',content:'[video] '+p});
     H.push({role:'assistant',content:'[generated video] '+p});
     localStorage.setItem('x1hist', JSON.stringify(H.slice(-80)));
     saveChat();
-  }catch(e){ t.remove(); addMsg({role:'a',label:'x1 video',text:'**Video fail:** connect nahi hua.'}); }
+  }catch(e){ t.remove(); addMsg({role:'a',label:'x1 video',text:'**Video fail:** '+(e.message||'connect nahi hua')}); }
 }
 
-// ---- CHATS ----
 function saveChat(){
   if(!curId){ curId='c'+Date.now(); localStorage.setItem('x1cur',curId); }
   let c = chats.find(x=>x.id===curId);
@@ -618,15 +617,9 @@ function loadChat(c){
   $('#wrap').innerHTML=''; H = (c.msgs||[]).slice(-40);
   localStorage.setItem('x1hist', JSON.stringify(H));
   curId=c.id; localStorage.setItem('x1cur',curId);
-  H.forEach(m=>{ if(m.role==='user'||m.role==='assistant') addMsg({role:m.role==='user'?'u':'a', label:m.role==='assistant'?'x1':null, text:m.content}); });
+  H.forEach(m=>{ if(m.role==='user'||m.role==='assistant')
+    addMsg({role:m.role==='user'?'u':'a', label:m.role==='assistant'?'x1':null, text:m.content}); });
   closeDrawer(); toast('Chat load ho gayi');
-}
-function newChat(){
-  saveChat();
-  H=[]; localStorage.setItem('x1hist','[]');
-  curId=null; localStorage.removeItem('x1cur');
-  $('#wrap').innerHTML=''; $('#wrap').appendChild(buildHello());
-  bindChips(); closeDrawer(); toast('Naya chat');
 }
 function buildHello(){
   const d=document.createElement('div'); d.className='hello'; d.id='hello';
@@ -640,7 +633,13 @@ function buildHello(){
   return d;
 }
 function bindChips(){ $$('.chip').forEach(c=>c.onclick=()=>{ input.value=c.dataset.q; send(); }); }
-
+function newChat(){
+  saveChat();
+  H=[]; localStorage.setItem('x1hist','[]');
+  curId=null; localStorage.removeItem('x1cur');
+  $('#wrap').innerHTML=''; $('#wrap').appendChild(buildHello());
+  bindChips(); closeDrawer(); toast('Naya chat');
+}
 function openDrawer(){ $('#drawer').classList.add('open'); $('#scrim').classList.add('on'); }
 function closeDrawer(){ $('#drawer').classList.remove('open'); $('#scrim').classList.remove('on'); }
 $('#menu').onclick=openDrawer;
@@ -672,14 +671,12 @@ $('#impIn').onchange=async e=>{
   }catch(err){ toast('Backup file kharab hai'); }
 };
 
-// ---- PRO ----
 $('#proBtn').onclick=()=>$('#proModal').classList.add('open');
 $('#proClose').onclick=()=>$('#proModal').classList.remove('open');
 $('#lmClose').onclick=()=>$('#limitModal').classList.remove('open');
 $('#lmPro').onclick=()=>{ $('#limitModal').classList.remove('open'); $('#proModal').classList.add('open'); };
 $('#payBtn').onclick=()=>{
-  const u='upi://pay?pa='+ST.upi+'&pn='+encodeURIComponent(ST.pay_name)+'&am=99&cu=INR&tn=X1PRO';
-  location.href=u;
+  location.href='upi://pay?pa='+ST.upi+'&pn='+encodeURIComponent(ST.pay_name)+'&am=99&cu=INR&tn=X1PRO';
 };
 $('#copyUpi').onclick=()=>{ copy(ST.upi); toast('UPI ID copy: '+ST.upi); };
 $('#utrBtn').onclick=async ()=>{
@@ -688,10 +685,10 @@ $('#utrBtn').onclick=async ()=>{
   proMsg('wait','Check kar raha hu...');
   try{
     const d = await api('/api/premium',{method:'POST',body:JSON.stringify({utr})});
-    if(d.ok && d.status==='approved'){ proMsg('ok','PRO unlock ho gaya!'); await loadStatus(); startPoll(utr); }
+    if(d.ok && d.status==='approved'){ proMsg('ok','PRO unlock ho gaya!'); await loadStatus(); }
     else if(d.ok && d.status==='pending'){ proMsg('wait','Payment verify ho raha hai...'); startPoll(utr); }
     else proMsg('no', d.error||'Kuch galat hua');
-  }catch(e){ proMsg('no','Backend se connect nahi hua'); }
+  }catch(e){ proMsg('no','Connect nahi hua: '+(e.message||'')); }
 };
 $('#codeBtn').onclick=async ()=>{
   const code=$('#codeIn').value.trim();
@@ -707,14 +704,13 @@ function startPoll(utr){
   clearInterval(pollTimer);
   pollTimer=setInterval(async ()=>{
     try{
-      const d=await api('/api/premium/check?utr='+utr);
-      if(d.status==='approved'){ clearInterval(pollTimer); proMsg('ok','PRO approve ho gaya! 🎉'); await loadStatus(); }
+      const d=await api('/api/premium/check?utr='+utr, {}, 2);
+      if(d.status==='approved'){ clearInterval(pollTimer); proMsg('ok','PRO approve ho gaya!'); await loadStatus(); }
       else if(d.status==='rejected'){ clearInterval(pollTimer); proMsg('no','Payment reject hua — support se baat karo'); }
     }catch(e){}
   },5000);
 }
 
-// ---- INIT ----
 (async ()=>{
   await loadStatus();
   renderChats();
